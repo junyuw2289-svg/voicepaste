@@ -179,7 +179,7 @@ function VoiceCapsule({ visible, phase, rawText, cleanText, hotkeyPressed }: {
       transform: `translateX(-50%) translateY(${visible ? 0 : 20}px)`,
       opacity: visible ? 1 : 0,
       transition: "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
-      zIndex: 50, width: 520, pointerEvents: "none",
+      zIndex: 50, width: "min(520px, calc(100% - 32px))", pointerEvents: "none",
     }}>
       <div style={{
         background: "#faf9f5", border: "1.5px solid #e8e6dc", borderRadius: 18,

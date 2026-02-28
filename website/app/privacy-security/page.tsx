@@ -5,7 +5,7 @@ import {
   Database,
   Trash2,
   CheckCircle,
-  Server,
+  Send,
   Mic,
   HardDrive,
   FileSearch,
@@ -23,7 +23,7 @@ const DOWNLOAD_URL =
 /* ─── Header (shared) ─── */
 function Header() {
   return (
-    <header className="flex h-[72px] w-full items-center justify-between bg-[var(--light)] px-20">
+    <header className="flex h-[72px] w-full items-center justify-between bg-[var(--light)] px-5 md:px-10 lg:px-20">
       <Link href="/" className="flex items-center gap-2">
         <span className="text-xl">&#127908;</span>
         <span className="font-serif-display text-[26px] text-[var(--dark)]">
@@ -31,7 +31,7 @@ function Header() {
         </span>
       </Link>
 
-      <nav className="flex items-center gap-8">
+      <nav className="hidden lg:flex items-center gap-8">
         {[
           { label: "How It Works", href: "/#how-it-works" },
           { label: "Features", href: "/#features" },
@@ -65,7 +65,7 @@ function Header() {
 /* ─── Hero ─── */
 function PrivacyHero() {
   return (
-    <section className="relative flex w-full flex-col items-center gap-8 overflow-hidden bg-[var(--dark)] px-[120px] pt-[120px] pb-[80px]">
+    <section className="relative flex w-full flex-col items-center gap-8 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] pt-20 md:pt-[100px] lg:pt-[120px] pb-16 md:pb-20 lg:pb-[80px]">
       {/* Background glow - green tinted */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_30%,rgba(120,140,93,0.25),transparent)]" />
 
@@ -86,14 +86,14 @@ function PrivacyHero() {
         </span>
 
         <h1
-          className="hero-enter font-serif-display max-w-[900px] text-center text-[72px] leading-[1.05] tracking-[-2px] text-white"
+          className="hero-enter font-serif-display max-w-[900px] text-center text-[36px] md:text-[52px] lg:text-[72px] leading-[1.05] tracking-[-1px] lg:tracking-[-2px] text-white"
           style={{ animationDelay: "0.15s" }}
         >
           Your data stays on <em className="text-[var(--green)]">your</em> device.
         </h1>
 
         <p
-          className="hero-enter max-w-[600px] text-center text-[20px] leading-[1.7] text-[var(--mid-gray)]"
+          className="hero-enter max-w-[600px] text-center text-base md:text-lg lg:text-[20px] leading-[1.7] text-[var(--mid-gray)]"
           style={{ animationDelay: "0.25s" }}
         >
           We built One Percent with a simple principle: your voice, your text, your data.
@@ -146,19 +146,19 @@ function KeyPrinciples() {
   ];
 
   return (
-    <section className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-[120px] py-[100px]">
-      <h2 className="fade-in font-serif-display text-5xl text-[var(--dark)]">
+    <section className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
+      <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-[var(--dark)]">
         Privacy is Not a Feature. It&apos;s a Promise.
       </h2>
       <p className="fade-in max-w-[600px] text-center text-lg text-[var(--mid-gray)]">
         Every design decision we make starts with one question: does this protect our users?
       </p>
 
-      <div className="grid w-full max-w-[1100px] grid-cols-3 gap-6">
+      <div className="grid w-full max-w-[1100px] grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {principles.map((p) => (
           <div
             key={p.title}
-            className="slide-up group flex flex-col gap-5 rounded-3xl border border-[var(--light-gray)] bg-white p-9 transition-all duration-500 hover:-translate-y-1 hover:shadow-lg hover:border-[var(--green)]/20"
+            className="slide-up group flex flex-col gap-5 rounded-3xl border border-[var(--light-gray)] bg-white p-6 md:p-8 lg:p-9 transition-all duration-500 hover:-translate-y-1 hover:shadow-lg hover:border-[var(--green)]/20"
             style={{ transitionDelay: p.delay }}
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(120,140,93,0.1)] transition-all duration-300 group-hover:bg-[rgba(120,140,93,0.18)] group-hover:scale-110">
@@ -175,40 +175,41 @@ function KeyPrinciples() {
 
 /* ─── Comparison ─── */
 function Comparison() {
-  const weCollect = [
-    "Anonymous usage analytics (opt-in)",
-    "Crash reports (opt-in)",
-    "Account email for authentication",
+  const localData = [
+    "Your transcription history (JSON files)",
+    "Your custom dictionary",
+    "Your settings & preferences",
+    "Your OpenAI API key",
   ];
 
-  const weDont = [
+  const neverCollected = [
     "Your voice recordings",
     "Your transcribed text content",
-    "Your personal files or documents",
-    "Your browsing or app usage history",
-    "Any data sold to third parties",
+    "Personal files or documents",
+    "Usage analytics or telemetry",
     "Biometric or voiceprint data",
+    "Any data shared with third parties",
   ];
 
   return (
-    <section className="relative flex w-full flex-col items-center gap-14 overflow-hidden bg-[var(--dark)] px-[120px] py-[100px]">
+    <section className="relative flex w-full flex-col items-center gap-14 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(120,140,93,0.1),transparent)]" />
 
-      <h2 className="fade-in font-serif-display relative z-10 text-5xl text-white">
+      <h2 className="fade-in font-serif-display relative z-10 text-3xl md:text-4xl lg:text-5xl text-white">
         Complete Transparency
       </h2>
 
-      <div className="fade-in relative z-10 flex w-full max-w-[900px] gap-8" style={{ transitionDelay: "0.1s" }}>
-        {/* What we collect */}
-        <div className="flex flex-1 flex-col gap-6 rounded-3xl border border-[rgba(120,140,93,0.2)] bg-[#1a1a19] p-9">
+      <div className="fade-in relative z-10 flex w-full max-w-[900px] flex-col md:flex-row gap-8" style={{ transitionDelay: "0.1s" }}>
+        {/* What stays on your device */}
+        <div className="flex flex-1 flex-col gap-6 rounded-3xl border border-[rgba(120,140,93,0.2)] bg-[#1a1a19] p-6 md:p-8 lg:p-9">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(120,140,93,0.15)]">
-              <CheckCircle className="h-5 w-5 text-[var(--green)]" />
+              <HardDrive className="h-5 w-5 text-[var(--green)]" />
             </div>
-            <h3 className="text-lg font-semibold text-[var(--green)]">What We Collect</h3>
+            <h3 className="text-lg font-semibold text-[var(--green)]">What Stays On Your Device</h3>
           </div>
           <div className="flex flex-col gap-4">
-            {weCollect.map((item) => (
+            {localData.map((item) => (
               <div key={item} className="flex items-start gap-3">
                 <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--green)]" />
                 <span className="text-sm leading-[1.6] text-[var(--mid-gray)]">{item}</span>
@@ -216,20 +217,20 @@ function Comparison() {
             ))}
           </div>
           <p className="mt-2 text-xs text-[var(--mid-gray)]/60">
-            * All analytics are anonymized and opt-in only
+            * All data stored as local JSON files on your Mac
           </p>
         </div>
 
-        {/* What we DON'T collect */}
-        <div className="flex flex-1 flex-col gap-6 rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#1a1a19] p-9">
+        {/* What we NEVER collect */}
+        <div className="flex flex-1 flex-col gap-6 rounded-3xl border border-[rgba(255,255,255,0.08)] bg-[#1a1a19] p-6 md:p-8 lg:p-9">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(217,119,87,0.12)]">
               <X className="h-5 w-5 text-[var(--orange)]" />
             </div>
-            <h3 className="text-lg font-semibold text-white">What We Don&apos;t Collect</h3>
+            <h3 className="text-lg font-semibold text-white">What We Never Collect</h3>
           </div>
           <div className="flex flex-col gap-4">
-            {weDont.map((item) => (
+            {neverCollected.map((item) => (
               <div key={item} className="flex items-start gap-3">
                 <X className="mt-0.5 h-4 w-4 shrink-0 text-[var(--orange)]/60" />
                 <span className="text-sm leading-[1.6] text-white/80">{item}</span>
@@ -254,9 +255,9 @@ function DataLifecycle() {
       borderColor: "rgba(217,119,87,0.2)",
     },
     {
-      icon: Server,
-      title: "We Process",
-      desc: "Speech recognized and polished by AI",
+      icon: Send,
+      title: "Sent to OpenAI",
+      desc: "Audio sent via your API key for transcription & polish",
       color: "#6a9bcc",
       bgColor: "rgba(106,155,204,0.1)",
       borderColor: "rgba(106,155,204,0.2)",
@@ -264,7 +265,7 @@ function DataLifecycle() {
     {
       icon: Trash2,
       title: "Audio Deleted",
-      desc: "Voice recording purged immediately",
+      desc: "Voice recording purged immediately after processing",
       color: "var(--orange)",
       bgColor: "rgba(217,119,87,0.1)",
       borderColor: "rgba(217,119,87,0.2)",
@@ -272,7 +273,7 @@ function DataLifecycle() {
     {
       icon: HardDrive,
       title: "Text Saved Locally",
-      desc: "Only polished text stored on your Mac",
+      desc: "Polished text stored on your Mac as JSON",
       color: "var(--green)",
       bgColor: "rgba(120,140,93,0.1)",
       borderColor: "rgba(120,140,93,0.2)",
@@ -280,22 +281,22 @@ function DataLifecycle() {
   ];
 
   return (
-    <section className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-[120px] py-[100px]">
-      <h2 className="fade-in font-serif-display text-5xl text-[var(--dark)]">
+    <section className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
+      <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-[var(--dark)]">
         Your Data Lifecycle
       </h2>
       <p className="fade-in max-w-[550px] text-center text-lg text-[var(--mid-gray)]">
         From voice to text in seconds. Audio deleted instantly. Text stored only on your device.
       </p>
 
-      <div className="fade-in relative flex w-full max-w-[1000px] items-center justify-between" style={{ transitionDelay: "0.15s" }}>
+      <div className="fade-in relative flex w-full max-w-[1000px] flex-col md:flex-row items-center justify-between gap-8 md:gap-0" style={{ transitionDelay: "0.15s" }}>
         {/* Connecting line */}
-        <div className="absolute top-[44px] left-[80px] right-[80px] h-[2px] bg-[var(--light-gray)]">
+        <div className="hidden md:block absolute top-[44px] left-[80px] right-[80px] h-[2px] bg-[var(--light-gray)]">
           <div className="absolute inset-0 bg-gradient-to-r from-[var(--orange)] via-[#6a9bcc] to-[var(--green)] opacity-40" />
         </div>
 
         {steps.map((s, i) => (
-          <div key={s.title} className="relative z-10 flex flex-col items-center gap-4" style={{ width: 200 }}>
+          <div key={s.title} className="relative z-10 flex w-full md:w-auto flex-col items-center gap-4" style={{ maxWidth: 200 }}>
             <div
               className="flex h-[88px] w-[88px] items-center justify-center rounded-full border-2 bg-white"
               style={{
@@ -312,7 +313,7 @@ function DataLifecycle() {
             </div>
             {i < steps.length - 1 && (
               <ArrowRight
-                className="absolute top-[36px] -right-[18px] h-5 w-5 text-[var(--mid-gray)]"
+                className="absolute top-[36px] -right-[18px] hidden md:block h-5 w-5 text-[var(--mid-gray)]"
                 style={{ opacity: 0.4 }}
               />
             )}
@@ -351,18 +352,18 @@ function TrustBadges() {
   ];
 
   return (
-    <section className="relative flex w-full flex-col items-center gap-14 overflow-hidden bg-[var(--dark)] px-[120px] py-[100px]">
+    <section className="relative flex w-full flex-col items-center gap-14 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_60%_at_80%_30%,rgba(120,140,93,0.1),transparent)]" />
 
-      <h2 className="fade-in font-serif-display relative z-10 text-5xl text-white">
+      <h2 className="fade-in font-serif-display relative z-10 text-3xl md:text-4xl lg:text-5xl text-white">
         Built on Trust
       </h2>
 
-      <div className="fade-in relative z-10 grid w-full max-w-[900px] grid-cols-2 gap-6" style={{ transitionDelay: "0.1s" }}>
+      <div className="fade-in relative z-10 grid w-full max-w-[900px] grid-cols-1 md:grid-cols-2 gap-6" style={{ transitionDelay: "0.1s" }}>
         {badges.map((b) => (
           <div
             key={b.title}
-            className="group flex items-start gap-5 rounded-2xl border border-[rgba(120,140,93,0.15)] bg-[#1a1a19] p-8 transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(120,140,93,0.3)]"
+            className="group flex items-start gap-5 rounded-2xl border border-[rgba(120,140,93,0.15)] bg-[#1a1a19] p-6 md:p-8 transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(120,140,93,0.3)]"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[rgba(120,140,93,0.12)] transition-all duration-300 group-hover:bg-[rgba(120,140,93,0.2)]">
               <b.icon className="h-6 w-6 text-[var(--green)]" />
@@ -412,8 +413,8 @@ const privacyFaqs = [
 
 function PrivacyFAQ() {
   return (
-    <section className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-[120px] py-[100px]">
-      <h2 className="fade-in font-serif-display text-5xl text-[var(--dark)]">
+    <section className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
+      <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-[var(--dark)]">
         Privacy Questions? Answers.
       </h2>
 
@@ -432,7 +433,7 @@ function PrivacyFAQ() {
 /* ─── CTA ─── */
 function PrivacyCTA() {
   return (
-    <section className="relative flex w-full flex-col items-center gap-9 overflow-hidden bg-[var(--dark)] px-[120px] py-[100px]">
+    <section className="relative flex w-full flex-col items-center gap-9 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_40%,rgba(120,140,93,0.2),transparent)]" />
 
       <div className="relative z-10 flex flex-col items-center gap-9">
@@ -440,7 +441,7 @@ function PrivacyCTA() {
           <Shield className="h-8 w-8 text-[var(--green)]" />
         </div>
 
-        <h2 className="fade-in font-serif-display text-center text-[48px] leading-[1.1] tracking-[-1px] text-white">
+        <h2 className="fade-in font-serif-display text-center text-3xl md:text-[40px] lg:text-[48px] leading-[1.1] tracking-tight lg:tracking-[-1px] text-white">
           Your Privacy. Our Priority.
         </h2>
 
@@ -502,8 +503,8 @@ function Footer() {
   ];
 
   return (
-    <footer className="flex w-full flex-col gap-12 bg-[var(--canvas-dark)] px-16 py-12">
-      <div className="flex w-full gap-16">
+    <footer className="flex w-full flex-col gap-12 bg-[var(--canvas-dark)] px-6 md:px-10 lg:px-16 py-8 md:py-12">
+      <div className="flex w-full flex-col md:flex-row gap-8 md:gap-16">
         <div className="flex flex-1 flex-col gap-3">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-lg">&#127908;</span>

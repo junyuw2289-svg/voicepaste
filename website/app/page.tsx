@@ -84,7 +84,7 @@ function OpenSourceBanner() {
 /* ─── Header ─── */
 function Header() {
   return (
-    <header className="flex h-[72px] w-full items-center justify-between bg-[var(--light)] px-20">
+    <header className="flex h-[72px] w-full items-center justify-between bg-[var(--light)] px-5 md:px-10 lg:px-20">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2">
         <span className="text-xl">&#127908;</span>
@@ -94,7 +94,7 @@ function Header() {
       </Link>
 
       {/* Nav */}
-      <nav className="flex items-center gap-8">
+      <nav className="hidden lg:flex items-center gap-8">
         {[
           { label: "How It Works", href: "#how-it-works" },
           { label: "Features", href: "#features" },
@@ -126,22 +126,22 @@ function Header() {
 /* ─── Hero ─── */
 function Hero() {
   return (
-    <section className="relative flex w-full flex-col items-center gap-10 overflow-hidden bg-[var(--dark)] px-[120px] pt-[140px] pb-[100px]">
+    <section className="relative flex w-full flex-col items-center gap-10 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] pt-20 md:pt-[100px] lg:pt-[140px] pb-16 md:pb-20 lg:pb-[100px]">
       {/* Radial glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_25%,rgba(217,119,87,0.35),transparent)]" />
 
       {/* Floating decorations */}
-      <ParallaxDecoration speed={0.08} className="absolute top-[60px] left-[80px] opacity-10">
+      <ParallaxDecoration speed={0.08} className="hidden md:block absolute top-[60px] left-[80px] opacity-10">
         <svg width="120" height="120" viewBox="0 0 120 120" fill="none" style={{ animation: "float-slow 8s ease-in-out infinite" }}>
           <circle cx="60" cy="60" r="55" stroke="#d97757" strokeWidth="1" strokeDasharray="4 4" />
         </svg>
       </ParallaxDecoration>
-      <ParallaxDecoration speed={-0.06} className="absolute top-[120px] right-[100px] opacity-[0.07]">
+      <ParallaxDecoration speed={-0.06} className="hidden md:block absolute top-[120px] right-[100px] opacity-[0.07]">
         <svg width="80" height="80" viewBox="0 0 80 80" fill="none" style={{ animation: "float 6s ease-in-out infinite 1s" }}>
           <circle cx="40" cy="40" r="35" stroke="#b0aea5" strokeWidth="1" strokeDasharray="3 3" />
         </svg>
       </ParallaxDecoration>
-      <ParallaxDecoration speed={0.12} className="absolute bottom-[80px] left-[200px] opacity-[0.06]">
+      <ParallaxDecoration speed={0.12} className="hidden md:block absolute bottom-[80px] left-[200px] opacity-[0.06]">
         <div className="h-3 w-3 rounded-full bg-[var(--orange)]" style={{ animation: "breathe 4s ease-in-out infinite" }} />
       </ParallaxDecoration>
 
@@ -158,14 +158,14 @@ function Hero() {
         </div>
 
         <h1
-          className="hero-enter font-serif-display max-w-[1000px] text-center text-[96px] leading-[1] tracking-[-3px] text-white"
+          className="hero-enter font-serif-display max-w-[1000px] text-center text-[40px] md:text-[64px] lg:text-[96px] leading-[1] tracking-[-1px] md:tracking-[-2px] lg:tracking-[-3px] text-white"
           style={{ animationDelay: "0.15s" }}
         >
           Speak naturally, paste perfectly.
         </h1>
 
         <p
-          className="hero-enter max-w-[650px] text-center text-[22px] leading-[1.6] text-[var(--mid-gray)]"
+          className="hero-enter max-w-[650px] text-center text-base md:text-lg lg:text-[22px] leading-[1.6] text-[var(--mid-gray)]"
           style={{ animationDelay: "0.25s" }}
         >
           Open-source voice-to-text for macOS. Your voice becomes polished text — instantly, in any app. 50+ languages. Free forever.
@@ -173,18 +173,18 @@ function Hero() {
 
         {/* CTA buttons */}
         <div
-          className="hero-enter flex items-center gap-4"
+          className="hero-enter flex flex-col sm:flex-row items-center gap-4"
           style={{ animationDelay: "0.35s" }}
         >
           <a
             href={DOWNLOAD_URL}
-            className="group flex h-14 items-center justify-center rounded-[14px] bg-[var(--orange)] px-10 text-[17px] font-semibold text-white transition-all duration-300 hover:bg-[var(--orange-hover)] hover:shadow-xl hover:shadow-[var(--orange)]/25 hover:-translate-y-[2px]"
+            className="w-full sm:w-auto group flex h-14 items-center justify-center rounded-[14px] bg-[var(--orange)] px-10 text-[17px] font-semibold text-white transition-all duration-300 hover:bg-[var(--orange-hover)] hover:shadow-xl hover:shadow-[var(--orange)]/25 hover:-translate-y-[2px]"
           >
             Download for macOS
           </a>
           <a
             href={GITHUB_URL}
-            className="flex h-14 items-center justify-center rounded-[14px] border-[1.5px] border-[var(--mid-gray)] px-10 text-[17px] text-[var(--mid-gray)] transition-all duration-300 hover:border-white hover:text-white hover:-translate-y-[1px]"
+            className="w-full sm:w-auto flex h-14 items-center justify-center rounded-[14px] border-[1.5px] border-[var(--mid-gray)] px-10 text-[17px] text-[var(--mid-gray)] transition-all duration-300 hover:border-white hover:text-white hover:-translate-y-[1px]"
           >
             View on GitHub
           </a>
@@ -227,23 +227,23 @@ function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="flex w-full flex-col items-center gap-12 bg-[var(--dark)] px-[120px] py-[100px]"
+      className="flex w-full flex-col items-center gap-12 bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]"
     >
       <div className="fade-in">
         <Badge>How It Works</Badge>
       </div>
-      <h2 className="fade-in font-serif-display text-5xl text-white">
+      <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-white">
         Three Steps. Zero Effort.
       </h2>
       <p className="fade-in max-w-[550px] text-center text-xl text-[rgba(176,174,165,0.8)]">
         No complex setup, no learning curve. Just bring your own OpenAI API key and start talking.
       </p>
 
-      <div className="flex w-full gap-6">
+      <div className="flex w-full flex-col md:flex-row gap-6">
         {steps.map((s, i) => (
           <div
             key={s.num}
-            className={`slide-up group flex flex-1 flex-col gap-5 rounded-[20px] bg-[#1a1a19] p-10 border transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-black/20 ${
+            className={`slide-up group flex flex-1 flex-col gap-5 rounded-[20px] bg-[#1a1a19] p-6 md:p-8 lg:p-10 border transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-black/20 ${
               s.highlight
                 ? "border-[rgba(217,119,87,0.2)] hover:border-[rgba(217,119,87,0.4)]"
                 : "border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.15)]"
@@ -253,7 +253,7 @@ function HowItWorks() {
             <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-[var(--orange)] transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[var(--orange)]/30">
               <span className="text-[22px] font-bold text-white">{s.num}</span>
             </div>
-            <h3 className="text-[22px] font-semibold text-white">{s.title}</h3>
+            <h3 className="text-lg md:text-xl lg:text-[22px] font-semibold text-white">{s.title}</h3>
             <p className="text-sm leading-[1.6] text-[var(--mid-gray)]">
               {s.desc}
             </p>
@@ -267,7 +267,7 @@ function HowItWorks() {
 /* ─── Vibe Coding Demo Section ─── */
 function DemoShowcase() {
   return (
-    <section className="relative flex w-full flex-col items-center gap-12 overflow-hidden bg-[var(--dark)] px-[120px] py-[100px]">
+    <section className="relative flex w-full flex-col items-center gap-12 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
       {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(217,119,87,0.12),transparent)]" />
 
@@ -275,7 +275,7 @@ function DemoShowcase() {
         <div className="fade-in">
           <Badge>Live Demo</Badge>
         </div>
-        <h2 className="fade-in font-serif-display text-5xl text-white">
+        <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-white">
           Voice to Code, In Seconds
         </h2>
         <p className="fade-in max-w-[600px] text-center text-xl text-[var(--mid-gray)]">
@@ -304,7 +304,7 @@ function CoreFeatures() {
   return (
     <section
       id="features"
-      className="relative flex w-full flex-col items-center gap-8 overflow-hidden bg-[var(--dark)] px-[120px] py-[100px]"
+      className="relative flex w-full flex-col items-center gap-8 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]"
     >
       {/* Radial glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_80%_50%,rgba(217,119,87,0.15),transparent)]" />
@@ -313,7 +313,7 @@ function CoreFeatures() {
         <div className="fade-in">
           <Badge>Features</Badge>
         </div>
-        <h2 className="fade-in font-serif-display text-5xl text-white">
+        <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-white">
           Your Voice, Perfected
         </h2>
         <p className="fade-in max-w-[650px] text-center text-xl text-[var(--mid-gray)]">
@@ -321,11 +321,11 @@ function CoreFeatures() {
           thoughts become clear, polished writing. All running locally on your machine.
         </p>
 
-        <div className="flex w-full flex-col gap-24">
+        <div className="flex w-full flex-col gap-16 lg:gap-24">
           {/* Feature 1: AI Polish */}
-          <div className="flex w-full items-center gap-16">
+          <div className="flex w-full flex-col lg:flex-row items-center gap-8 lg:gap-16">
             <div className="slide-in-left flex flex-1 flex-col gap-6">
-              <h3 className="text-[32px] font-semibold text-white">
+              <h3 className="text-2xl md:text-[28px] lg:text-[32px] font-semibold text-white">
                 AI That Thinks Like You
               </h3>
               <p className="text-[17px] leading-[1.7] text-[var(--mid-gray)]">
@@ -346,18 +346,18 @@ function CoreFeatures() {
                 ))}
               </div>
             </div>
-            <div className="scale-in h-[400px] w-[540px] shrink-0 overflow-hidden rounded-[20px] border border-[rgba(217,119,87,0.15)] transition-all duration-500 hover:border-[rgba(217,119,87,0.3)] hover:shadow-xl hover:shadow-[var(--orange)]/10" style={{ transitionDelay: "0.1s" }}>
+            <div className="scale-in h-[300px] md:h-[350px] lg:h-[400px] w-full lg:w-[540px] shrink-0 overflow-hidden rounded-[20px] border border-[rgba(217,119,87,0.15)] transition-all duration-500 hover:border-[rgba(217,119,87,0.3)] hover:shadow-xl hover:shadow-[var(--orange)]/10" style={{ transitionDelay: "0.1s" }}>
               <PolishDemo />
             </div>
           </div>
 
           {/* Feature 2: Smart Itemize */}
-          <div className="flex w-full items-center gap-16">
-            <div className="scale-in h-[400px] w-[540px] shrink-0 overflow-hidden rounded-[20px] border border-[rgba(120,140,93,0.15)] transition-all duration-500 hover:border-[rgba(120,140,93,0.3)] hover:shadow-xl hover:shadow-[var(--green)]/10" style={{ transitionDelay: "0.1s" }}>
+          <div className="flex w-full flex-col-reverse lg:flex-row items-center gap-8 lg:gap-16">
+            <div className="scale-in h-[300px] md:h-[350px] lg:h-[400px] w-full lg:w-[540px] shrink-0 overflow-hidden rounded-[20px] border border-[rgba(120,140,93,0.15)] transition-all duration-500 hover:border-[rgba(120,140,93,0.3)] hover:shadow-xl hover:shadow-[var(--green)]/10" style={{ transitionDelay: "0.1s" }}>
               <ItemizeDemo />
             </div>
             <div className="slide-in-right flex flex-1 flex-col gap-6">
-              <h3 className="text-[32px] font-semibold text-white">
+              <h3 className="text-2xl md:text-[28px] lg:text-[32px] font-semibold text-white">
                 From Stream of Thought to Structure
               </h3>
               <p className="text-[17px] leading-[1.7] text-[var(--mid-gray)]">
@@ -421,16 +421,16 @@ const gridCards = [
 
 function FeatureGrid() {
   return (
-    <section className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-[120px] py-[100px]">
-      <h2 className="fade-in font-serif-display text-5xl text-[var(--dark)]">
+    <section className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
+      <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-[var(--dark)]">
         Built for Your Daily Flow
       </h2>
 
-      <div className="grid w-full grid-cols-3 gap-6">
+      <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {gridCards.map((c, i) => (
           <div
             key={c.title}
-            className="slide-up group flex flex-col gap-5 rounded-3xl border border-[var(--light-gray)] bg-white p-9 transition-[box-shadow,border-color] duration-500 hover:shadow-xl hover:shadow-black/5 hover:border-[var(--orange)]/20"
+            className="slide-up group flex flex-col gap-5 rounded-3xl border border-[var(--light-gray)] bg-white p-6 md:p-8 lg:p-9 transition-[box-shadow,border-color] duration-500 hover:shadow-xl hover:shadow-black/5 hover:border-[var(--orange)]/20"
             style={{ transitionDelay: `${i * 0.06}s` }}
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-[var(--orange-light)] transition-all duration-300 group-hover:scale-110 group-hover:bg-[var(--orange)] group-hover:shadow-lg group-hover:shadow-[var(--orange)]/20">
@@ -452,26 +452,26 @@ function FeatureGrid() {
 /* ─── Stats ─── */
 function Stats() {
   return (
-    <section className="relative flex w-full flex-col items-center gap-20 overflow-hidden bg-[var(--dark)] px-[120px] py-[100px]">
+    <section className="relative flex w-full flex-col items-center gap-12 md:gap-16 lg:gap-20 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]">
       {/* Radial glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_60%_at_20%_30%,rgba(217,119,87,0.12),transparent)]" />
 
       {/* Stats with count-up */}
-      <div className="fade-in relative z-10 flex w-full gap-12">
+      <div className="fade-in relative z-10 flex w-full flex-col md:flex-row gap-8 md:gap-12">
         <div className="flex flex-1 flex-col items-center gap-2">
-          <span className="font-mono-display text-[64px] font-bold text-white">
+          <span className="font-mono-display text-[40px] md:text-[52px] lg:text-[64px] font-bold text-white">
             <CountUp value={50} suffix="+" />
           </span>
           <span className="text-base text-[var(--mid-gray)]">Languages Supported</span>
         </div>
         <div className="flex flex-1 flex-col items-center gap-2">
-          <span className="font-mono-display text-[64px] font-bold text-white">
+          <span className="font-mono-display text-[40px] md:text-[52px] lg:text-[64px] font-bold text-white">
             <CountUp value={2} prefix="~" suffix="s" />
           </span>
           <span className="text-base text-[var(--mid-gray)]">End-to-End Latency</span>
         </div>
         <div className="flex flex-1 flex-col items-center gap-2">
-          <span className="font-mono-display text-[64px] font-bold text-white">
+          <span className="font-mono-display text-[40px] md:text-[52px] lg:text-[64px] font-bold text-white">
             100%
           </span>
           <span className="text-base text-[var(--mid-gray)]">Open Source &amp; Free</span>
@@ -486,12 +486,12 @@ function OpenSource() {
   return (
     <section
       id="open-source"
-      className="flex w-full flex-col items-center gap-12 bg-[var(--light)] px-[120px] py-[100px]"
+      className="flex w-full flex-col items-center gap-12 bg-[var(--light)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]"
     >
       <div className="fade-in">
         <Badge>Open Source</Badge>
       </div>
-      <h2 className="fade-in font-serif-display text-5xl text-[var(--dark)]">
+      <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-[var(--dark)]">
         Free Forever. No Catch.
       </h2>
       <p className="fade-in max-w-[600px] text-center text-xl text-[var(--mid-gray)]">
@@ -502,9 +502,9 @@ function OpenSource() {
         className="fade-in flex gap-8"
         style={{ transitionDelay: "0.1s" }}
       >
-        <div className="group flex w-[520px] flex-col gap-6 rounded-[28px] border border-[var(--light-gray)] bg-white p-11 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-black/5">
+        <div className="group flex w-full max-w-[520px] flex-col gap-6 rounded-[28px] border border-[var(--light-gray)] bg-white p-6 md:p-8 lg:p-11 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl hover:shadow-black/5">
           <div className="flex items-end gap-1">
-            <span className="font-mono-display text-[56px] text-[var(--dark)]">
+            <span className="font-mono-display text-[40px] md:text-[48px] lg:text-[56px] text-[var(--dark)]">
               $0
             </span>
             <span className="mb-2 text-base text-[var(--mid-gray)]">
@@ -527,7 +527,7 @@ function OpenSource() {
               </div>
             ))}
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <a
               href={DOWNLOAD_URL}
               className="flex h-12 flex-1 items-center justify-center rounded-[10px] bg-[var(--orange)] text-sm font-bold text-white transition-all duration-300 hover:bg-[var(--orange-hover)] hover:shadow-lg hover:shadow-[var(--orange)]/20"
@@ -579,9 +579,9 @@ function FAQ() {
   return (
     <section
       id="faq"
-      className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-[120px] py-[100px]"
+      className="flex w-full flex-col items-center gap-14 bg-[var(--light)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[100px]"
     >
-      <h2 className="fade-in font-serif-display text-5xl text-[var(--dark)]">
+      <h2 className="fade-in font-serif-display text-3xl md:text-4xl lg:text-5xl text-[var(--dark)]">
         Questions? Answers.
       </h2>
 
@@ -600,7 +600,7 @@ function FAQ() {
 /* ─── Final CTA ─── */
 function FinalCTA() {
   return (
-    <section className="relative flex w-full flex-col items-center gap-9 overflow-hidden bg-[var(--dark)] px-[120px] py-[120px]">
+    <section className="relative flex w-full flex-col items-center gap-9 overflow-hidden bg-[var(--dark)] px-6 md:px-16 lg:px-[120px] py-16 md:py-20 lg:py-[120px]">
       {/* Radial glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_40%,rgba(217,119,87,0.3),transparent)]" />
 
@@ -609,7 +609,7 @@ function FinalCTA() {
           <Waveform heights={[20, 36, 48, 36, 20]} animated />
         </div>
 
-        <h2 className="fade-in font-serif-display text-center text-[56px] leading-[1.1] tracking-[-1px] text-white">
+        <h2 className="fade-in font-serif-display text-center text-3xl md:text-[40px] lg:text-[56px] leading-[1.1] tracking-tight lg:tracking-[-1px] text-white">
           Start Using VoicePaste Today.
         </h2>
 
@@ -621,18 +621,18 @@ function FinalCTA() {
         </p>
 
         <div
-          className="fade-in flex items-center gap-4"
+          className="fade-in flex flex-col sm:flex-row items-center gap-4"
           style={{ transitionDelay: "0.2s" }}
         >
           <a
             href={DOWNLOAD_URL}
-            className="flex h-[60px] items-center justify-center rounded-[14px] bg-[var(--orange)] px-12 text-lg font-semibold text-white transition-all duration-300 hover:bg-[var(--orange-hover)] hover:shadow-xl hover:shadow-[var(--orange)]/25 hover:-translate-y-[2px]"
+            className="w-full sm:w-auto flex h-[60px] items-center justify-center rounded-[14px] bg-[var(--orange)] px-12 text-lg font-semibold text-white transition-all duration-300 hover:bg-[var(--orange-hover)] hover:shadow-xl hover:shadow-[var(--orange)]/25 hover:-translate-y-[2px]"
           >
             Download for macOS
           </a>
           <a
             href={GITHUB_URL}
-            className="flex h-[60px] items-center justify-center rounded-[14px] border-[1.5px] border-[var(--mid-gray)] px-10 text-lg text-[var(--mid-gray)] transition-all duration-300 hover:border-white hover:text-white hover:-translate-y-[1px]"
+            className="w-full sm:w-auto flex h-[60px] items-center justify-center rounded-[14px] border-[1.5px] border-[var(--mid-gray)] px-10 text-lg text-[var(--mid-gray)] transition-all duration-300 hover:border-white hover:text-white hover:-translate-y-[1px]"
           >
             View on GitHub
           </a>
@@ -678,9 +678,9 @@ function Footer() {
   ];
 
   return (
-    <footer className="flex w-full flex-col gap-12 bg-[var(--canvas-dark)] px-16 py-12">
+    <footer className="flex w-full flex-col gap-12 bg-[var(--canvas-dark)] px-6 md:px-10 lg:px-16 py-8 md:py-12">
       {/* Top */}
-      <div className="flex w-full gap-16">
+      <div className="flex w-full flex-col md:flex-row gap-8 md:gap-16">
         {/* Brand */}
         <div className="flex flex-1 flex-col gap-3">
           <Link href="/" className="flex items-center gap-2">
@@ -719,7 +719,7 @@ function Footer() {
       <div className="h-px w-full bg-[#333333]" />
 
       {/* Bottom */}
-      <div className="flex w-full items-center justify-between">
+      <div className="flex w-full flex-col md:flex-row items-center justify-between gap-4">
         <span className="text-[13px] text-[var(--mid-gray)]">
           &copy; 2026 VoicePaste. Open source under MIT license.
         </span>
