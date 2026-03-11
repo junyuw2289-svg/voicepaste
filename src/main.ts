@@ -119,6 +119,11 @@ function initApp(): void {
   console.log('VoicePaste initialized. Press ` to start/stop recording.');
 }
 
+// Suppress Electron's default crash dialog — errors are logged to console instead
+dialog.showErrorBox = (title: string, content: string) => {
+  console.error(`[Main] Suppressed error dialog — ${title}: ${content}`);
+};
+
 process.on('uncaughtException', (error) => {
   console.error('[Main] Uncaught exception:', error);
 });

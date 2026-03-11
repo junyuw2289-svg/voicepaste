@@ -79,8 +79,12 @@ export class RealtimeTranscriptionService extends EventEmitter {
           this.connectTimeoutId = null;
         }
         this.rejectConnect = null;
-        if (this.listenerCount('error') > 0) {
-          this.emit('error', err.message);
+        try {
+          if (this.listenerCount('error') > 0) {
+            this.emit('error', err.message);
+          }
+        } catch {
+          console.error('[Realtime] Failed to emit error event (no listener)');
         }
         reject(err);
       });
@@ -177,7 +181,11 @@ export class RealtimeTranscriptionService extends EventEmitter {
             this.pendingStop = null;
           }
         } else if (this.listenerCount('error') > 0) {
-          this.emit('error', errorMsg);
+          try {
+            this.emit('error', errorMsg);
+          } catch {
+            console.error('[Realtime] Failed to emit server error (no listener)');
+          }
         } else {
           console.error('[Realtime] Unhandled server error (no listener):', errorMsg);
         }
@@ -264,7 +272,8 @@ export class RealtimeTranscriptionService extends EventEmitter {
     if (this.ws) {
       console.log(`[Realtime] Terminating WebSocket (readyState=${this.ws.readyState})`);
       try {
-        this.ws.terminate(); // Force-close immediately instead of waiting for server close frame
+        this.ws.removeAllListeners(); // Detach all WS handlers first to prevent async emitErrorAndClose
+        this.ws.terminate();
       } catch {
         // Already closed
       }
