@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS } from './shared/constants';
-import type { ElectronAPI } from './shared/types';
-import type { AppStatus } from './shared/types';
+import type { AppStatus, ElectronAPI } from './shared/types';
 
 const electronAPI: ElectronAPI = {
   onRecordingStart: (callback: () => void) => {
@@ -18,6 +17,11 @@ const electronAPI: ElectronAPI = {
     const handler = () => callback();
     ipcRenderer.on(IPC_CHANNELS.RECORDING_CANCEL, handler);
     return () => { ipcRenderer.removeListener(IPC_CHANNELS.RECORDING_CANCEL, handler); };
+  },
+  onRecordingCancelAvailability: (callback: (available: boolean) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, available: boolean) => callback(available);
+    ipcRenderer.on(IPC_CHANNELS.RECORDING_CANCEL_AVAILABILITY, handler);
+    return () => { ipcRenderer.removeListener(IPC_CHANNELS.RECORDING_CANCEL_AVAILABILITY, handler); };
   },
   onStatusUpdate: (callback: (status: AppStatus) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, status: AppStatus) => callback(status);
@@ -36,6 +40,11 @@ const electronAPI: ElectronAPI = {
   },
   cancelRecording: () => {
     ipcRenderer.send(IPC_CHANNELS.RECORDING_CANCELLED);
+  },
+  recordingPreflight: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.RECORDING_PREFLIGHT),
+  reportRecordingStartFailure: (message: string) => {
+    ipcRenderer.send(IPC_CHANNELS.RECORDING_START_FAILED, message);
   },
   getSettings: () => {
     return ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET);

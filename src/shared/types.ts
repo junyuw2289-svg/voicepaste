@@ -63,10 +63,13 @@ export interface ElectronAPI {
   onRecordingStart: (callback: () => void) => Disposer;
   onRecordingStop: (callback: () => void) => Disposer;
   onRecordingCancel: (callback: () => void) => Disposer;
+  onRecordingCancelAvailability: (callback: (available: boolean) => void) => Disposer;
   onStatusUpdate: (callback: (status: AppStatus) => void) => Disposer;
   onTranscriptionResult: (callback: (text: string) => void) => Disposer;
   onTranscriptionError: (callback: (error: string) => void) => Disposer;
   cancelRecording: () => void;
+  recordingPreflight: () => Promise<{ success: boolean; error?: string }>;
+  reportRecordingStartFailure: (message: string) => void;
   getSettings: () => Promise<AppSettings>;
   setSettings: (settings: Partial<AppSettings>) => void;
 

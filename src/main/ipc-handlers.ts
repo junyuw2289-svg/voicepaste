@@ -1,5 +1,5 @@
-import { ipcMain, BrowserWindow } from 'electron';
-import { IPC_CHANNELS, OVERLAY_WIDTH } from '../shared/constants';
+import { app, BrowserWindow, dialog, ipcMain, shell, systemPreferences } from 'electron';
+import { IPC_CHANNELS } from '../shared/constants';
 import { TranscriptionService } from './transcription-service';
 import { RealtimeTranscriptionService } from './realtime-transcription-service';
 import { TextInjector } from './text-injector';
@@ -10,6 +10,9 @@ import type { AppStatus, CursorContext } from '../shared/types';
 import { historyService, dictionaryService } from './service-ipc';
 import { captureCursorContext } from './context-capture';
 import type { RealtimeSessionManager } from './realtime-session-manager';
+
+const START_FAILURE_HIDE_DELAY_MS = 2200;
+const MICROPHONE_SETTINGS_URL = 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone';
 
 export class IPCHandler {
   private transcriptionService: TranscriptionService;
@@ -69,24 +72,101 @@ export class IPCHandler {
     }
   }
 
+  private resetRecordingFlow(): void {
+    this.recordingStartedAt = null;
+    this.pendingContext = Promise.resolve(null);
+    if (this.realtimeService) {
+      this.realtimeService.disconnect();
+      this.realtimeService = null;
+    }
+    this.sessionManager?.scheduleReWarm();
+  }
+
+  private async promptForMicrophoneAccess(): Promise<void> {
+    const permissionTarget = app.isPackaged
+      ? `${app.getName()}.app`
+      : 'the current development app (Electron / Terminal / Cursor)';
+
+    const { response } = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Microphone Permission Required',
+      message: 'VoicePaste needs microphone access before it can record.',
+      detail: `Enable microphone access for ${permissionTarget} in System Settings -> Privacy & Security -> Microphone. macOS requires reopening the app after this permission changes.`,
+      buttons: ['Open System Settings', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    });
+
+    if (response === 0) {
+      shell.openExternal(MICROPHONE_SETTINGS_URL).catch((error) => {
+        console.error('[IPC] Failed to open microphone settings:', error);
+      });
+    }
+  }
+
+  private async preflightRecordingStart(): Promise<{ success: boolean; error?: string }> {
+    if (process.platform !== 'darwin') {
+      return { success: true };
+    }
+
+    const status = systemPreferences.getMediaAccessStatus('microphone');
+    console.log(`[IPC] Microphone access status: ${status}`);
+
+    if (status === 'granted') {
+      return { success: true };
+    }
+
+    if (status === 'not-determined') {
+      const granted = await systemPreferences.askForMediaAccess('microphone');
+      console.log(`[IPC] Microphone access request result: ${granted ? 'granted' : 'denied'}`);
+      if (granted) {
+        return { success: true };
+      }
+    }
+
+    await this.promptForMicrophoneAccess();
+    return {
+      success: false,
+      error: 'Microphone access is required. Enable it in System Settings and reopen VoicePaste.',
+    };
+  }
+
+  private handleRecordingStartFailure(message: string): void {
+    console.warn(`[IPC] Recording start failed: ${message}`);
+    this.resetRecordingFlow();
+
+    this.overlayWindow?.webContents.send(IPC_CHANNELS.TRANSCRIPTION_ERROR, message);
+    this.sendStatus('error');
+
+    setTimeout(() => {
+      this.overlayWindow?.hide();
+      this.sendStatus('idle');
+    }, START_FAILURE_HIDE_DELAY_MS);
+  }
+
   register(): void {
     // Remove any stale handlers first (prevents duplicates from Vite HMR rebuilds)
     ipcMain.removeAllListeners(IPC_CHANNELS.RECORDING_CANCELLED);
+    ipcMain.removeAllListeners(IPC_CHANNELS.RECORDING_START_FAILED);
     ipcMain.removeAllListeners(IPC_CHANNELS.SETTINGS_SET);
+    ipcMain.removeHandler(IPC_CHANNELS.RECORDING_PREFLIGHT);
     ipcMain.removeHandler(IPC_CHANNELS.SETTINGS_GET);
 
     // Handle cancel from renderer (X button clicked)
     ipcMain.on(IPC_CHANNELS.RECORDING_CANCELLED, () => {
       console.log('[IPC] Recording cancelled by user');
-      this.recordingStartedAt = null;
-      // Clean up any active realtime session
-      if (this.realtimeService) {
-        this.realtimeService.disconnect();
-        this.realtimeService = null;
-      }
-      this.sessionManager?.scheduleReWarm();
+      this.resetRecordingFlow();
       this.sendStatus('idle');
       this.overlayWindow?.hide();
+    });
+
+    ipcMain.on(IPC_CHANNELS.RECORDING_START_FAILED, (_event, message: string) => {
+      this.handleRecordingStartFailure(message || 'Recording failed to start');
+    });
+
+    ipcMain.handle(IPC_CHANNELS.RECORDING_PREFLIGHT, () => {
+      return this.preflightRecordingStart();
     });
 
     // Handle settings
@@ -198,6 +278,7 @@ export class IPCHandler {
     ipcMain.on(IPC_CHANNELS.REALTIME_STOP, async () => {
       if (!this.realtimeService) {
         console.warn('[IPC] REALTIME_STOP but no active realtime service');
+        this.handleRecordingStartFailure('Recording did not start correctly. Please try again.');
         return;
       }
 
@@ -260,7 +341,7 @@ export class IPCHandler {
 
         // Inject text + save to history
         const injectStart = Date.now();
-        await this.textInjector.inject(finalText);
+        await this.textInjector.inject(finalText, context);
         const injectMs = Date.now() - injectStart;
 
         const durationSeconds = this.recordingStartedAt

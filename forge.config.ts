@@ -11,7 +11,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const shouldSign = !!process.env.APPLE_ID;
+const shouldSign = !!process.env.APPLE_ID && process.env.SKIP_APPLE_SIGN !== '1';
+const shouldNotarize = shouldSign && process.env.SKIP_APPLE_NOTARIZE !== '1';
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -27,19 +28,30 @@ const config: ForgeConfig = {
     ...(shouldSign ? {
       osxSign: {
         identity: 'Developer ID Application',
-        'hardened-runtime': true,
+        hardenedRuntime: true,
         entitlements: 'entitlements.plist',
-        'entitlements-inherit': 'entitlements.plist',
+        optionsForFile: (filePath: string) => {
+          if (filePath.includes('VoicePaste Helper')) {
+            return {
+              entitlements: 'entitlements.inherit.plist',
+              hardenedRuntime: true,
+            };
+          }
+
+          return {};
+        },
       },
+    } : {
+      osxSign: { identity: '-' },
+    }),
+    ...(shouldNotarize ? {
       osxNotarize: {
         tool: 'notarytool',
         appleId: process.env.APPLE_ID!,
         appleIdPassword: process.env.APPLE_ID_PASSWORD!,
         teamId: process.env.APPLE_TEAM_ID!,
       },
-    } : {
-      osxSign: { identity: '-' },
-    }),
+    } : {}),
   },
   rebuildConfig: {},
   makers: [

@@ -17,8 +17,7 @@ import {
 import { ScrollObserver, FAQItem } from "../components/motion";
 import Link from "next/link";
 
-const DOWNLOAD_URL =
-  "https://github.com/junyuw2289-svg/voicepaste/releases/latest/download/VoicePaste.dmg";
+const DOWNLOAD_URL = "/download";
 
 /* ─── Header (shared) ─── */
 function Header() {

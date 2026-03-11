@@ -13,8 +13,27 @@ function rlog(msg: string) {
   try { window.electronAPI.rendererLog(msg); } catch { /* preload not ready */ }
 }
 
+function formatRecordingStartError(error: unknown): string {
+  if (error instanceof DOMException) {
+    if (error.name === 'NotAllowedError') {
+      return 'Microphone permission was denied.';
+    }
+    if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
+      return 'The selected microphone is unavailable.';
+    }
+    return `${error.name}: ${error.message}`;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}
+
 const MAX_RECORDING_MS = 10 * 60 * 1000;
 const HARD_KILL_MS = 15 * 60 * 1000;
+const MAX_PENDING_AUDIO_CHUNKS = 50;
 
 // Pill height (fixed)
 const PILL_HEIGHT = 34;
@@ -26,12 +45,17 @@ export const Overlay: React.FC = () => {
   const { status, setStatus, error, setError } = useAppStore();
   const [volumeWarning, setVolumeWarning] = useState<'none' | 'silence'>('none');
   const [transcriptLines, setTranscriptLines] = useState<string[]>([]);
+  const [escCancelAvailable, setEscCancelAvailable] = useState(true);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hardKillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCancellingRef = useRef<boolean>(false);
   const isStoppingRef = useRef<boolean>(false);
   const isStartingRef = useRef<boolean>(false);
+  const realtimeReadyRef = useRef<boolean>(false);
+  const pendingStopRequestedRef = useRef<boolean>(false);
+  const pendingAudioChunksRef = useRef<ArrayBuffer[]>([]);
+  const pendingAudioOverflowLoggedRef = useRef<boolean>(false);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const transcriptCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -50,6 +74,22 @@ export const Overlay: React.FC = () => {
     if (hardKillTimerRef.current) {
       clearTimeout(hardKillTimerRef.current);
       hardKillTimerRef.current = null;
+    }
+  }, []);
+
+  const resetRealtimeAudioState = useCallback(() => {
+    realtimeReadyRef.current = false;
+    pendingStopRequestedRef.current = false;
+    pendingAudioChunksRef.current = [];
+    pendingAudioOverflowLoggedRef.current = false;
+    pcmRecorder.clearChunkHandler();
+  }, []);
+
+  const playRecordingStopCue = useCallback(() => {
+    try {
+      soundEffects.recordingStop();
+    } catch (error) {
+      console.warn('[Overlay] Failed to play stop sound:', error);
     }
   }, []);
 
@@ -81,8 +121,10 @@ export const Overlay: React.FC = () => {
 
     try {
       pcmRecorder.stop();
+      resetRealtimeAudioState();
       analyserRef.current = null;
       setTranscriptLines([]);
+      setEscCancelAvailable(true);
       soundEffects.error();
       setStatus('idle');
 
@@ -97,11 +139,36 @@ export const Overlay: React.FC = () => {
         isCancellingRef.current = false;
       }, 100);
     }
-  }, [setStatus, clearRecordingTimers]);
+  }, [setStatus, clearRecordingTimers, resetRealtimeAudioState]);
 
   const handleStopRecording = useCallback(async () => {
     if (isCancellingRef.current) {
       console.log('[Stop] Skipping normal stop - recording was cancelled');
+      return;
+    }
+
+    if (pendingStopRequestedRef.current) {
+      console.log('[Stop] Stop already queued while realtime is still connecting');
+      return;
+    }
+
+    if (isStartingRef.current && !realtimeReadyRef.current) {
+      isStoppingRef.current = true;
+      pendingStopRequestedRef.current = true;
+      clearRecordingTimers();
+
+      rlog('[Stop] Stop requested before realtime ready — freezing mic and waiting for session');
+
+      try {
+        pcmRecorder.stop();
+      } catch (error) {
+        console.warn('[Stop] Failed to stop mic during startup:', error);
+      }
+
+      analyserRef.current = null;
+      setEscCancelAvailable(true);
+      playRecordingStopCue();
+      setStatus('transcribing');
       return;
     }
 
@@ -117,8 +184,10 @@ export const Overlay: React.FC = () => {
 
     try {
       pcmRecorder.stop();
+      resetRealtimeAudioState();
       analyserRef.current = null;
-      soundEffects.recordingStop();
+      setEscCancelAvailable(true);
+      playRecordingStopCue();
       setStatus('transcribing');
 
       rlog('[Stop] Sending realtimeStop to main process');
@@ -126,11 +195,12 @@ export const Overlay: React.FC = () => {
     } catch (err) {
       console.error('Failed to stop realtime recording:', err);
       setError('Recording failed');
+      setStatus('error');
     } finally {
       // Delay clearing so main process can finish stop before a new start fires
       setTimeout(() => { isStoppingRef.current = false; }, 300);
     }
-  }, [setStatus, setError, clearRecordingTimers]);
+  }, [setStatus, setError, clearRecordingTimers, resetRealtimeAudioState, playRecordingStopCue]);
 
   const handleStartRecording = useCallback(async () => {
     if (isStartingRef.current || isStoppingRef.current) {
@@ -139,14 +209,50 @@ export const Overlay: React.FC = () => {
     }
     isStartingRef.current = true;
     isCancellingRef.current = false;
+    pendingStopRequestedRef.current = false;
     setTranscriptLines([]);
-    setStatus('recording'); // Show "Listening..." immediately, prevent stale state flash
+    setEscCancelAvailable(true);
+    resetRealtimeAudioState();
 
     try {
-      const settings = await window.electronAPI.getSettings();
-      const deviceId = settings.audioInputDeviceId || undefined;
+      const preflight = await window.electronAPI.recordingPreflight();
+      if (!preflight.success) {
+        rlog(`[Start] Preflight failed: ${preflight.error ?? 'Microphone access is required'}`);
+        window.electronAPI.reportRecordingStartFailure(
+          preflight.error || 'Microphone access is required. Enable it in System Settings and reopen VoicePaste.'
+        );
+        return;
+      }
 
-      rlog(`[Start] deviceId="${settings.audioInputDeviceId || '(default)'}"`);
+      const settings = await window.electronAPI.getSettings();
+      const savedDeviceId = settings.audioInputDeviceId;
+      const deviceId = savedDeviceId && savedDeviceId !== 'default'
+        ? savedDeviceId
+        : undefined;
+      let chunkCount = 0;
+      pcmRecorder.onChunk((pcm16) => {
+        chunkCount++;
+        if (chunkCount <= 3 || chunkCount % 50 === 0) {
+          rlog(`[Realtime] Audio chunk #${chunkCount} (${pcm16.byteLength} bytes)`);
+        }
+
+        if (!realtimeReadyRef.current) {
+          pendingAudioChunksRef.current.push(pcm16.slice(0));
+          if (pendingAudioChunksRef.current.length > MAX_PENDING_AUDIO_CHUNKS) {
+            pendingAudioChunksRef.current.splice(0, pendingAudioChunksRef.current.length - MAX_PENDING_AUDIO_CHUNKS);
+            if (!pendingAudioOverflowLoggedRef.current) {
+              pendingAudioOverflowLoggedRef.current = true;
+              rlog(`[Start] Buffered audio exceeded ${MAX_PENDING_AUDIO_CHUNKS} chunks; dropping oldest audio`);
+            }
+          }
+          return;
+        }
+
+        window.electronAPI.realtimeSendAudio(pcm16);
+      });
+      setStatus('recording');
+
+      rlog(`[Start] deviceId="${deviceId || '(default)'}"`);
 
       // Start PCM recorder + connect WebSocket in parallel
       rlog('[Start] Launching realtimeStart + mic init in parallel');
@@ -167,10 +273,15 @@ export const Overlay: React.FC = () => {
             micReady = true;
             rlog('[Start] Default mic fallback succeeded');
           } catch (fallbackErr) {
-            rlog(`[Start] Default mic also failed: ${fallbackErr}`);
+            rlog(`[Start] Default mic also failed: ${formatRecordingStartError(fallbackErr)}`);
+            window.electronAPI.reportRecordingStartFailure(formatRecordingStartError(fallbackErr));
+            return;
           }
         } else {
-          rlog(`[Start] pcmRecorder.start() FAILED: ${err}`);
+          const formattedError = formatRecordingStartError(err);
+          rlog(`[Start] pcmRecorder.start() FAILED: ${formattedError}`);
+          window.electronAPI.reportRecordingStartFailure(formattedError);
+          return;
         }
       }
 
@@ -178,9 +289,12 @@ export const Overlay: React.FC = () => {
       rlog(`[Start] realtimeStart result: success=${result.success}, micReady=${micReady}${result.error ? ', error=' + result.error : ''}`);
 
       // Check if user stopped/cancelled while we were connecting
-      if (isStoppingRef.current || isCancellingRef.current) {
-        rlog('[Start] Stop/cancel requested during connect — aborting');
-        if (micReady) pcmRecorder.stop();
+      if (isCancellingRef.current) {
+        rlog('[Start] Cancel requested during connect — aborting');
+        if (micReady) {
+          pcmRecorder.stop();
+        }
+        resetRealtimeAudioState();
         if (result.success) {
           window.electronAPI.realtimeStop();
         }
@@ -189,24 +303,40 @@ export const Overlay: React.FC = () => {
 
       if (!result.success || !micReady) {
         if (micReady) pcmRecorder.stop();
-        setError(result.error || 'Failed to connect');
-        setStatus('error');
+        resetRealtimeAudioState();
+        analyserRef.current = null;
+        isStoppingRef.current = false;
+        window.electronAPI.reportRecordingStartFailure(
+          result.error || (micReady ? 'Failed to connect to realtime transcription' : 'Failed to access microphone')
+        );
         return;
       }
 
-      // Wire PCM chunks to main process
-      let chunkCount = 0;
-      pcmRecorder.onChunk((pcm16) => {
-        chunkCount++;
-        if (chunkCount <= 3 || chunkCount % 50 === 0) {
-          rlog(`[Realtime] Audio chunk #${chunkCount} (${pcm16.byteLength} bytes)`);
+      realtimeReadyRef.current = true;
+      if (pendingAudioChunksRef.current.length > 0) {
+        rlog(`[Start] Flushing ${pendingAudioChunksRef.current.length} buffered audio chunks`);
+        for (const chunk of pendingAudioChunksRef.current) {
+          window.electronAPI.realtimeSendAudio(chunk);
         }
-        window.electronAPI.realtimeSendAudio(pcm16);
-      });
+        pendingAudioChunksRef.current = [];
+      }
+
+      if (pendingStopRequestedRef.current) {
+        rlog('[Start] Realtime became ready after stop request — sending delayed realtimeStop');
+        setEscCancelAvailable(true);
+        setStatus('transcribing');
+        window.electronAPI.realtimeStop();
+        setTimeout(() => { isStoppingRef.current = false; }, 300);
+        return;
+      }
 
       rlog('[Start] REALTIME READY — pcm chunks wired, recording active');
       analyserRef.current = pcmRecorder.getAnalyser();
-      soundEffects.recordingStart();
+      try {
+        soundEffects.recordingStart();
+      } catch (error) {
+        console.warn('[Overlay] Failed to play start sound:', error);
+      }
       setStatus('recording');
 
       // Timers
@@ -223,12 +353,16 @@ export const Overlay: React.FC = () => {
         setError('Recording killed: exceeded 15 min limit');
       }, HARD_KILL_MS);
     } catch (err) {
+      const formattedError = formatRecordingStartError(err);
       console.error('Failed to start recording:', err);
-      setError('Failed to access microphone');
+      resetRealtimeAudioState();
+      analyserRef.current = null;
+      isStoppingRef.current = false;
+      window.electronAPI.reportRecordingStartFailure(formattedError);
     } finally {
       isStartingRef.current = false;
     }
-  }, [setStatus, setError, handleStopRecording, clearRecordingTimers]);
+  }, [setStatus, setError, handleStopRecording, clearRecordingTimers, resetRealtimeAudioState]);
 
   // Update refs when handlers change
   useEffect(() => {
@@ -303,7 +437,12 @@ export const Overlay: React.FC = () => {
         setStatusRef.current?.(newStatus);
         if (newStatus === 'idle') {
           setTranscriptLines([]);
+          setEscCancelAvailable(true);
+          resetRealtimeAudioState();
         }
+      }),
+      window.electronAPI.onRecordingCancelAvailability((available) => {
+        setEscCancelAvailable(available);
       }),
       window.electronAPI.onTranscriptionResult((text) => {
         console.log('Transcription result:', text);
@@ -334,6 +473,11 @@ export const Overlay: React.FC = () => {
 
   const fullTranscript = transcriptLines.join(' ');
   const hasTranscript = fullTranscript.length > 0;
+  const recordingText = volumeWarning === 'silence'
+    ? 'No voice detected'
+    : escCancelAvailable
+      ? 'Listening...'
+      : 'X or ` to stop';
 
   return (
     <div className="overlay-container">
@@ -350,14 +494,14 @@ export const Overlay: React.FC = () => {
         )}
 
         {/* The floating pill */}
-        <div className="overlay-pill">
+        <div className={`overlay-pill${status === 'error' ? ' overlay-pill--error' : ''}`}>
           <div className={`pill-layer ${status === 'recording' ? 'pill-layer--active' : ''}`}>
             <WaveformAnimation
               analyser={status === 'recording' ? analyserRef.current : null}
               isActive={status === 'recording'}
             />
             <span className={`overlay-text${volumeWarning === 'silence' ? ' overlay-warning' : ''}`}>
-              {volumeWarning === 'silence' ? 'No voice detected' : 'Listening...'}
+              {recordingText}
             </span>
             <button
               className="cancel-button"
@@ -366,7 +510,7 @@ export const Overlay: React.FC = () => {
                 e.stopPropagation();
                 handleCancelRecording();
               }}
-              title="Cancel (ESC)"
+              title={escCancelAvailable ? 'Cancel (ESC)' : 'Cancel (ESC unavailable)'}
             >
               ✕
             </button>

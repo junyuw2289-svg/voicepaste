@@ -21,7 +21,12 @@ class SoundEffects {
   private playTone(options: ToneOptions): void {
     const ctx = this.getContext();
     const { frequency, duration, type = 'sine', gain = 0.15, decay = 0.15 } = options;
+    const safeDuration = Math.max(duration, 0.05);
+    const fadeInDuration = Math.min(0.02, safeDuration / 2);
+    const safeDecay = Math.min(decay, Math.max(safeDuration - fadeInDuration, 0.01));
     const now = ctx.currentTime;
+    const fadeInEnd = now + fadeInDuration;
+    const fadeOutStart = Math.max(fadeInEnd, now + safeDuration - safeDecay);
 
     const osc = ctx.createOscillator();
     const gainNode = ctx.createGain();
@@ -31,15 +36,15 @@ class SoundEffects {
 
     // Soft fade-in to avoid click, then gentle fade-out
     gainNode.gain.setValueAtTime(0.001, now);
-    gainNode.gain.exponentialRampToValueAtTime(gain, now + 0.02);
-    gainNode.gain.setValueAtTime(gain, now + duration - decay);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    gainNode.gain.exponentialRampToValueAtTime(gain, fadeInEnd);
+    gainNode.gain.setValueAtTime(gain, fadeOutStart);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + safeDuration);
 
     osc.connect(gainNode);
     gainNode.connect(ctx.destination);
 
     osc.start(now);
-    osc.stop(now + duration);
+    osc.stop(now + safeDuration);
   }
 
   /** Warm knock/bell sound when recording starts */

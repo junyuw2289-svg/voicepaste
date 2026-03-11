@@ -122,6 +122,10 @@ html, body {
   transition: width 0.2s ease-out, border-radius 0.2s ease-out;
 }
 
+.overlay-pill--error {
+  width: 320px;
+}
+
 /* When transcript card is visible above, merge pill into card */
 .transcript-card + .overlay-pill {
   width: 360px;
@@ -167,6 +171,8 @@ html, body {
   font-weight: 500;
   letter-spacing: 0.01em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .overlay-done {
@@ -175,9 +181,12 @@ html, body {
 
 .overlay-error {
   color: var(--color-red);
-  max-width: 160px;
+  max-width: 280px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
 }
 
 /* Glass sweep overlay for transcribing state */

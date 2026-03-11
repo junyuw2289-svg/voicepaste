@@ -4,6 +4,9 @@ export const IPC_CHANNELS = {
   RECORDING_STOP: 'recording:stop',
   RECORDING_CANCEL: 'recording:cancel',         // main -> renderer: cancel recording
   RECORDING_CANCELLED: 'recording:cancelled',   // renderer -> main: recording was cancelled
+  RECORDING_PREFLIGHT: 'recording:preflight',   // renderer -> main: check mic permission before start
+  RECORDING_START_FAILED: 'recording:start-failed', // renderer -> main: reset state after start failure
+  RECORDING_CANCEL_AVAILABILITY: 'recording:cancel-availability', // main -> renderer: whether ESC cancel is available
 
   // Transcription
   TRANSCRIPTION_RESULT: 'transcription:result',

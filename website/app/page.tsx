@@ -19,8 +19,7 @@ import PolishDemo from "./components/PolishDemo";
 import ItemizeDemo from "./components/ItemizeDemo";
 import Link from "next/link";
 
-const DOWNLOAD_URL =
-  "https://github.com/junyuw2289-svg/voicepaste/releases/latest/download/VoicePaste.dmg";
+const DOWNLOAD_URL = "/download";
 const GITHUB_URL = "https://github.com/junyuw2289-svg/voicepaste";
 
 /* ─── Waveform bars (decorative) ─── */

@@ -116,6 +116,33 @@ Should I consult a lawyer about this, or try adding some fallback features in th
 
 Return ONLY the polished text. No commentary, no preamble, no explanation.`;
 
+const REALTIME_REQUEST_TIMEOUT_MS = 10_000;
+const POLISH_REQUEST_TIMEOUT_MS = 20_000;
+
+async function fetchWithTimeout(
+  input: string,
+  init: RequestInit,
+  timeoutMs: number,
+  label: string,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(`${label} timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function buildContextBlock(context: CursorContext | null | undefined): string {
   if (!context) return '';
   const lines: string[] = [];
@@ -185,14 +212,25 @@ export async function fetchRealtimeToken(
 
   console.log('[openai-service] Creating realtime session...');
 
-  const response = await fetch('https://api.openai.com/v1/realtime/transcription_sessions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(sessionConfig),
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(
+      'https://api.openai.com/v1/realtime/transcription_sessions',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(sessionConfig),
+      },
+      REALTIME_REQUEST_TIMEOUT_MS,
+      'Realtime session request',
+    );
+  } catch (error) {
+    console.error(`[openai-service] Realtime session request failed: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  }
 
   if (!response.ok) {
     const errBody = await response.text();
@@ -253,14 +291,19 @@ export async function polishText(
       apiBody.reasoning_effort = tier.reasoningEffort;
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+    const response = await fetchWithTimeout(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiBody),
       },
-      body: JSON.stringify(apiBody),
-    });
+      POLISH_REQUEST_TIMEOUT_MS,
+      'Polish request',
+    );
 
     const polishMs = Date.now() - polishStart;
     console.log(`[openai-service] Polish ${tier.model} responded: status=${response.status}, ${polishMs}ms`);

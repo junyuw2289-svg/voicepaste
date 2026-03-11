@@ -1,10 +1,9 @@
 /**
- * PcmAudioRecorder wraps an AudioWorklet to capture PCM16 audio at 24kHz.
- * Used for OpenAI Realtime API streaming transcription.
+ * PcmAudioRecorder wraps an inline AudioWorklet to capture PCM16 audio at 24kHz.
+ * The worklet is loaded from a Blob URL so packaged builds don't depend on file paths
+ * inside app.asar.
  */
 
-// Inline worklet code as a string to avoid file-path resolution issues in packaged Electron apps.
-// AudioWorklet.addModule(new URL('./file.ts', import.meta.url)) breaks in asar-packaged builds.
 const PCM_WORKLET_CODE = `
 class PcmWorkletProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -12,24 +11,30 @@ class PcmWorkletProcessor extends AudioWorkletProcessor {
     this.buffer = new Int16Array(2400);
     this.writeIndex = 0;
   }
+
   process(inputs) {
     const input = inputs[0]?.[0];
     if (!input) return true;
+
     for (let i = 0; i < input.length; i += 2) {
       const sample = Math.max(-1, Math.min(1, input[i]));
       this.buffer[this.writeIndex++] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+
       if (this.writeIndex >= 2400) {
         this.port.postMessage(this.buffer.buffer.slice(0));
         this.writeIndex = 0;
       }
     }
+
     return true;
   }
 }
+
 registerProcessor('pcm-worklet-processor', PcmWorkletProcessor);
 `;
 
 let workletBlobUrl: string | null = null;
+
 function getWorkletBlobUrl(): string {
   if (!workletBlobUrl) {
     const blob = new Blob([PCM_WORKLET_CODE], { type: 'application/javascript' });
@@ -41,6 +46,7 @@ function getWorkletBlobUrl(): string {
 export class PcmAudioRecorder {
   private audioContext: AudioContext | null = null;
   private stream: MediaStream | null = null;
+  private sourceNode: MediaStreamAudioSourceNode | null = null;
   private workletNode: AudioWorkletNode | null = null;
   private analyser: AnalyserNode | null = null;
   private gainNode: GainNode | null = null;
@@ -49,6 +55,10 @@ export class PcmAudioRecorder {
 
   onChunk(cb: (pcm16: ArrayBuffer) => void): void {
     this.chunkCallback = cb;
+  }
+
+  clearChunkHandler(): void {
+    this.chunkCallback = null;
   }
 
   async start(deviceId?: string): Promise<void> {
@@ -63,6 +73,7 @@ export class PcmAudioRecorder {
       sampleSize: 16,
       latency: 0,
     };
+
     if (deviceId) {
       audioConstraints.deviceId = { exact: deviceId };
     }
@@ -75,7 +86,13 @@ export class PcmAudioRecorder {
     console.log(`[PcmRecorder] Active mic: "${track.label}"`);
 
     this.audioContext = new AudioContext({ sampleRate: 48000 });
-    const source = this.audioContext.createMediaStreamSource(this.stream);
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+    console.log(`[PcmRecorder] AudioContext state: ${this.audioContext.state}`);
+    console.log(`[PcmRecorder] sampleRate=${this.audioContext.sampleRate}, stride=2`);
+
+    this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
 
     this.gainNode = this.audioContext.createGain();
     this.gainNode.gain.value = 1.2;
@@ -83,7 +100,6 @@ export class PcmAudioRecorder {
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 256;
 
-    // Load worklet from inline blob URL (avoids asar file-path issues in packaged builds)
     await this.audioContext.audioWorklet.addModule(getWorkletBlobUrl());
 
     this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-worklet-processor');
@@ -91,10 +107,9 @@ export class PcmAudioRecorder {
       this.chunkCallback?.(event.data);
     };
 
-    source.connect(this.gainNode);
+    this.sourceNode.connect(this.gainNode);
     this.gainNode.connect(this.analyser);
     this.gainNode.connect(this.workletNode);
-    // Connect worklet to destination to keep the audio graph alive
     this.workletNode.connect(this.audioContext.destination);
 
     this._isRecording = true;
@@ -128,11 +143,15 @@ export class PcmAudioRecorder {
   private releaseResources(): void {
     this.workletNode?.disconnect();
     this.workletNode = null;
+    this.sourceNode?.disconnect();
+    this.sourceNode = null;
     this.stream?.getTracks().forEach((track) => track.stop());
     this.stream = null;
     this.analyser = null;
     this.gainNode = null;
-    this.audioContext?.close().catch(() => {});
+    this.audioContext?.close().catch((error) => {
+      console.warn('[PcmRecorder] Failed to close AudioContext:', error);
+    });
     this.audioContext = null;
   }
 }

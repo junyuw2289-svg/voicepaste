@@ -22,6 +22,15 @@ const store = new Store<StoreSchema>({
   },
 });
 
+function normalizeLegacyConfig(): void {
+  const legacyAudioInputDeviceId = store.get('audioInputDeviceId');
+  if (legacyAudioInputDeviceId === 'default') {
+    store.set('audioInputDeviceId', '');
+  }
+}
+
+normalizeLegacyConfig();
+
 store.set('hotkey', APP_DEFAULTS.hotkey);
 store.set('polishProvider', APP_DEFAULTS.polishProvider);
 
