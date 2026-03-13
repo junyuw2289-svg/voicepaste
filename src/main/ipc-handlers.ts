@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell, systemPreferences } from 'e
 import { IPC_CHANNELS } from '../shared/constants';
 import { TranscriptionService } from './transcription-service';
 import { RealtimeTranscriptionService } from './realtime-transcription-service';
+import type { RealtimeDebugSnapshot } from './realtime-transcription-service';
 import { TextInjector } from './text-injector';
 import { getConfig, setConfig } from './config-store';
 import { fetchRealtimeToken } from './openai-service';
@@ -144,6 +145,41 @@ export class IPCHandler {
       this.overlayWindow?.hide();
       this.sendStatus('idle');
     }, START_FAILURE_HIDE_DELAY_MS);
+  }
+
+  private mapRealtimeFailureToUserMessage(debug: RealtimeDebugSnapshot): string {
+    const failure = debug.lastTranscriptionFailure || debug.lastServerError || '';
+    const normalized = failure.toLowerCase();
+
+    if (normalized.includes('insufficient_quota') || normalized.includes('exceeded your current quota')) {
+      return 'OpenAI API quota exceeded. Add billing or credits to your OpenAI account, then try again.';
+    }
+
+    if (normalized.includes('invalid_api_key') || normalized.includes('incorrect api key')) {
+      return 'OpenAI API key is invalid. Update it in Settings and try again.';
+    }
+
+    if (normalized.includes('rate_limit') || normalized.includes('too many requests')) {
+      return 'OpenAI API rate limit reached. Wait a moment, then try again.';
+    }
+
+    if (normalized.includes('authentication') || normalized.includes('unauthorized') || normalized.includes('forbidden')) {
+      return 'OpenAI rejected the transcription request. Check your API key and account permissions.';
+    }
+
+    if (failure) {
+      return `Transcription failed: ${failure}`;
+    }
+
+    if (debug.speechStartedCount > 0) {
+      return 'Speech was detected, but no transcript was returned. Please try again.';
+    }
+
+    if (debug.audioChunksSent > 0) {
+      return 'Audio was recorded, but no transcript was returned. Please try again.';
+    }
+
+    return 'No speech detected.';
   }
 
   register(): void {
@@ -312,8 +348,9 @@ export class IPCHandler {
         this.sessionManager?.scheduleReWarm();
 
         if (!rawText?.trim()) {
+          const userMessage = this.mapRealtimeFailureToUserMessage(realtimeDebug);
           logDiagnostic('IPC', 'No speech detected diagnostics', realtimeDebug);
-          this.overlayWindow?.webContents.send(IPC_CHANNELS.TRANSCRIPTION_ERROR, 'No speech detected');
+          this.overlayWindow?.webContents.send(IPC_CHANNELS.TRANSCRIPTION_ERROR, userMessage);
           this.sendStatus('error');
           setTimeout(() => {
             this.overlayWindow?.hide();
