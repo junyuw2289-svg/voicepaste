@@ -1,4 +1,9 @@
 import type { CursorContext } from '../shared/types';
+import {
+  buildPolishContextBlock,
+  buildRealtimeTranscriptionPrompt,
+  sanitizePolishOutput,
+} from './transcript-guards';
 
 const POLISH_PROMPT = `You are a rewriting engine that turns raw speech transcriptions into clean, structured written text. A reader should not be able to tell the text originated from speech.
 
@@ -143,21 +148,6 @@ async function fetchWithTimeout(
   }
 }
 
-function buildContextBlock(context: CursorContext | null | undefined): string {
-  if (!context) return '';
-  const lines: string[] = [];
-  if (context.appName || context.windowTitle) {
-    lines.push(`CONTEXT: The user is in ${context.appName || 'an application'}${context.windowTitle ? `, working on "${context.windowTitle}"` : ''}.`);
-  }
-  if (context.selectedText) {
-    lines.push(`They had selected: "${context.selectedText.slice(0, 500)}"`);
-  }
-  if (lines.length > 0) {
-    lines.push('Use this context to understand technical terms, variable names, and coding vocabulary accurately. Preserve them exactly as intended.');
-  }
-  return lines.join('\n');
-}
-
 interface ModelTier {
   model: string;
   reasoningEffort?: string;
@@ -181,18 +171,9 @@ function selectModelTier(textLength: number): ModelTier {
 export async function fetchRealtimeToken(
   apiKey: string,
   language?: string,
-  dictionaryWords?: string,
+  dictionaryWords: string[] = [],
 ): Promise<{ clientSecret: string; expiresAt: string } | null> {
-  // Build dynamic transcription prompt
-  let transcriptionPrompt = 'Transcribe everything the speaker says — do not skip, summarize, or omit any part of the speech. The speaker may use multiple languages interchangeably (code-switching). Keep each word in its original language exactly as spoken. Do not translate.';
-
-  if (dictionaryWords) {
-    const words = dictionaryWords.split(',').map((w: string) => w.trim()).filter(Boolean);
-    if (words.length > 0) {
-      const limited = words.slice(0, 100);
-      transcriptionPrompt += ` The following are reference spellings for proper nouns and terms: ${limited.join(', ')}. Only use these exact spellings when you are at least 90% confident the speaker said one of them, based on both phonetic match and surrounding semantic context. Do not insert these words until the speaker actually says them.`;
-    }
-  }
+  const transcriptionPrompt = buildRealtimeTranscriptionPrompt(dictionaryWords);
 
   const sessionConfig: Record<string, unknown> = {
     input_audio_format: 'pcm16',
@@ -269,7 +250,7 @@ export async function polishText(
       return { polishedText: null, debugReason: 'text too long' };
     }
 
-    const contextBlock = buildContextBlock(context);
+    const contextBlock = buildPolishContextBlock(context);
     const systemPrompt = contextBlock
       ? `${POLISH_PROMPT}\n\n${contextBlock}`
       : POLISH_PROMPT;
@@ -324,15 +305,26 @@ export async function polishText(
       return { polishedText: null, model: tier.model, debugReason: reason };
     }
 
+    const sanitized = sanitizePolishOutput(polishedText, text, context);
+    if (sanitized.reasons.length > 0) {
+      console.warn(`[openai-service] Polish output sanitized: ${sanitized.reasons.join(', ')}`);
+    }
+
+    if (!sanitized.text) {
+      const reason = `polish output stripped: ${sanitized.reasons.join(', ') || 'empty after sanitization'}`;
+      console.error(`[openai-service] Polish FALLBACK: ${reason}`);
+      return { polishedText: null, model: tier.model, debugReason: reason };
+    }
+
     // 4x output length guard
-    if (polishedText.length > text.length * 4) {
-      const reason = `output too long: ${polishedText.length} vs input ${text.length} (4x guard)`;
+    if (sanitized.text.length > text.length * 4) {
+      const reason = `output too long: ${sanitized.text.length} vs input ${text.length} (4x guard)`;
       console.warn(`[openai-service] Polish FALLBACK: ${reason}`);
       return { polishedText: null, model: tier.model, debugReason: reason };
     }
 
-    console.log(`[openai-service] Polish SUCCESS: ${tier.model} ${polishMs}ms, ${text.length}->${polishedText.length} chars`);
-    return { polishedText, model: tier.model };
+    console.log(`[openai-service] Polish SUCCESS: ${tier.model} ${polishMs}ms, ${text.length}->${sanitized.text.length} chars`);
+    return { polishedText: sanitized.text, model: tier.model };
   } catch (error) {
     const reason = `catch: ${error instanceof Error ? error.message : String(error)}`;
     console.error(`[openai-service] Polish error: ${reason}`);

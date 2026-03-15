@@ -99,6 +99,15 @@ export class RealtimeTranscriptionService extends EventEmitter {
     this.accumulatedTranscripts.pop();
   }
 
+  /** Replace the last accumulated transcript after downstream filtering/correction. */
+  replaceLastTranscript(text: string): void {
+    if (this.accumulatedTranscripts.length === 0) {
+      return;
+    }
+
+    this.accumulatedTranscripts[this.accumulatedTranscripts.length - 1] = text;
+  }
+
   async connect(clientSecret: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.accumulatedTranscripts = [];

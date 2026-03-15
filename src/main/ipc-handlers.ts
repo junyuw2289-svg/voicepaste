@@ -12,6 +12,7 @@ import { historyService, dictionaryService } from './service-ipc';
 import { captureCursorContext } from './context-capture';
 import type { RealtimeSessionManager } from './realtime-session-manager';
 import { logDiagnostic, logMessage, type LoggerLevel } from './app-logger';
+import { applyDictionaryCorrections, sanitizeRealtimeTranscript } from './transcript-guards';
 
 const START_FAILURE_HIDE_DELAY_MS = 2200;
 const MICROPHONE_SETTINGS_URL = 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone';
@@ -259,7 +260,7 @@ export class IPCHandler {
           const tokenResult = await fetchRealtimeToken(
             config.openaiApiKey,
             config.language || undefined,
-            dictionaryWords?.length ? dictionaryWords.join(', ') : undefined,
+            dictionaryWords,
           );
           if (!tokenResult) {
             return { success: false, error: 'Failed to get session token' };
@@ -272,12 +273,32 @@ export class IPCHandler {
 
         // Wire up event listeners
         this.realtimeService.on('utterance', (text: string) => {
-          if (dictionaryWords?.length && this.isDictionaryHallucination(text, dictionaryWords)) {
-            console.warn(`[IPC] Filtered hallucinated utterance: "${text}"`);
+          let processedText = text;
+
+          const sanitizedUtterance = sanitizeRealtimeTranscript(processedText);
+          if (sanitizedUtterance.reasons.length > 0) {
+            console.warn(`[IPC] Sanitized realtime utterance: ${sanitizedUtterance.reasons.join(', ')}`);
+            if (!sanitizedUtterance.text) {
+              this.realtimeService?.popLastTranscript();
+              return;
+            }
+            this.realtimeService?.replaceLastTranscript(sanitizedUtterance.text);
+            processedText = sanitizedUtterance.text;
+          }
+
+          const correctedUtterance = applyDictionaryCorrections(processedText, dictionaryWords);
+          if (correctedUtterance.reasons.length > 0) {
+            console.log(`[IPC] Applied dictionary corrections to utterance: ${correctedUtterance.reasons.join(', ')}`);
+            this.realtimeService?.replaceLastTranscript(correctedUtterance.text);
+            processedText = correctedUtterance.text;
+          }
+
+          if (dictionaryWords?.length && this.isDictionaryHallucination(processedText, dictionaryWords)) {
+            console.warn(`[IPC] Filtered hallucinated utterance: "${processedText}"`);
             this.realtimeService?.popLastTranscript();
             return;
           }
-          this.overlayWindow?.webContents.send(IPC_CHANNELS.REALTIME_UTTERANCE, text);
+          this.overlayWindow?.webContents.send(IPC_CHANNELS.REALTIME_UTTERANCE, processedText);
         });
 
         this.realtimeService.on('error', (msg: string) => {
@@ -334,7 +355,7 @@ export class IPCHandler {
 
       try {
         // Wait for final transcript
-        const rawText = await this.realtimeService.stop();
+        let rawText = await this.realtimeService.stop();
         const flushMs = Date.now() - stopInitiatedAt;
         const realtimeDebug = this.realtimeService.getDebugSnapshot();
         logDiagnostic('IPC', 'Realtime stop result', {
@@ -346,6 +367,12 @@ export class IPCHandler {
         this.realtimeService.disconnect();
         this.realtimeService = null;
         this.sessionManager?.scheduleReWarm();
+
+        const sanitizedRawText = sanitizeRealtimeTranscript(rawText);
+        if (sanitizedRawText.reasons.length > 0) {
+          console.warn(`[IPC] Sanitized final realtime transcript: ${sanitizedRawText.reasons.join(', ')}`);
+          rawText = sanitizedRawText.text;
+        }
 
         if (!rawText?.trim()) {
           const userMessage = this.mapRealtimeFailureToUserMessage(realtimeDebug);
@@ -362,6 +389,12 @@ export class IPCHandler {
         const config = getConfig();
         const dictionaryWords = dictionaryService.getAllWords();
         const context = await this.pendingContext;
+
+        const correctedRawText = applyDictionaryCorrections(rawText, dictionaryWords);
+        if (correctedRawText.reasons.length > 0) {
+          console.log(`[IPC] Applied dictionary corrections to final transcript: ${correctedRawText.reasons.join(', ')}`);
+          rawText = correctedRawText.text;
+        }
 
         // Dictionary hallucination check
         if (dictionaryWords?.length && this.isDictionaryHallucination(rawText, dictionaryWords)) {
@@ -396,6 +429,15 @@ export class IPCHandler {
             console.log(`[IPC] Polish output: "${finalText}"${polishedText ? '' : ' (fallback to raw)'}`);
           } catch (err) {
             console.error('[IPC] Polish failed, using raw text:', err);
+          }
+        }
+
+        const correctedFinalText = applyDictionaryCorrections(finalText, dictionaryWords);
+        if (correctedFinalText.reasons.length > 0) {
+          console.log(`[IPC] Applied dictionary corrections to final output: ${correctedFinalText.reasons.join(', ')}`);
+          finalText = correctedFinalText.text;
+          if (polishedText) {
+            polishedText = correctedFinalText.text;
           }
         }
 
@@ -476,20 +518,29 @@ export class IPCHandler {
     if (!normalized) return false;
 
     const tokens = normalized.split(' ').filter(Boolean);
-    const dictPhrases = dictionaryWords.map(normalize);
+    const dictPhrases = Array.from(new Set(dictionaryWords.map(normalize).filter(Boolean)));
+    if (dictPhrases.length === 0) return false;
+
+    const uniqueMatches = dictPhrases.filter((phrase) => normalized.includes(phrase)).length;
+    if (uniqueMatches < 2 || tokens.length <= 3) return false;
 
     let remaining = normalized;
+    let matchedPhraseCount = 0;
     for (const phrase of dictPhrases) {
-      remaining = remaining.split(phrase).join(' ');
+      const parts = remaining.split(phrase);
+      matchedPhraseCount += Math.max(0, parts.length - 1);
+      remaining = parts.join(' ');
     }
     remaining = remaining.replace(/\s+/g, ' ').trim();
 
-    if (remaining.length === 0) return true;
+    if (remaining.length === 0) {
+      return matchedPhraseCount >= 3 || uniqueMatches >= 3;
+    }
 
     if (tokens.length <= 10) {
       const remainingTokens = remaining.split(' ').filter(Boolean);
       const dictTokenCount = tokens.length - remainingTokens.length;
-      if (dictTokenCount / tokens.length >= 0.6) return true;
+      if (dictTokenCount / tokens.length >= 0.8 && uniqueMatches >= 2) return true;
     }
 
     return false;

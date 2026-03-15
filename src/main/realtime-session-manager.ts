@@ -207,7 +207,7 @@ export class RealtimeSessionManager {
     const result = await fetchRealtimeToken(
       config.openaiApiKey,
       config.language || undefined,
-      dictionaryWords?.length ? dictionaryWords.join(', ') : undefined,
+      dictionaryWords,
     );
 
     if (!result) {
